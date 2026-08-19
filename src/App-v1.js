@@ -18,22 +18,14 @@ function getWeatherIcon(wmoCode) {
   return icons.get(arr);
 }
 
-// Renders a flag image instead of the Unicode regional-indicator emoji,
-// since Windows/Chromium don't render flag emoji and fall back to raw
-// letters (e.g. "PT" instead of 🇵🇹).
-function CountryFlag({ countryCode }) {
-  if (!countryCode) return null;
-  const code = countryCode.toLowerCase();
-  return (
-    <img
-      className="flag"
-      src={`https://flagcdn.com/24x18/${code}.png`}
-      srcSet={`https://flagcdn.com/48x36/${code}.png 2x`}
-      width={24}
-      height={18}
-      alt={`${countryCode} flag`}
-    />
-  );
+function convertToFlag(countryCode) {
+  if (!countryCode) return "";
+  const codePoints = countryCode
+    .toUpperCase()
+    .split("")
+    .map((char) => 127397 + char.charCodeAt());
+  // .map((char) => char.charCodeAt(0) - 65 + 127462);
+  return String.fromCodePoint(...codePoints);
 }
 
 function formatDay(dateStr) {
@@ -48,14 +40,16 @@ class App extends React.Component {
     this.state = {
       location: "lisbon",
       isLoading: false,
-      displayLocationName: "",
-      displayLocationCountryCode: "",
+      displayLocation: "",
       weather: {},
     };
     this.fetchWeather = this.fetchWeather.bind(this);
   }
 
   async fetchWeather() {
+    // console.log("Loading data");
+    // console.log(this);
+
     try {
       this.setState({ isLoading: true });
       // 1) Getting location (geocoding)
@@ -71,8 +65,7 @@ class App extends React.Component {
         geoData.results.at(0);
 
       this.setState({
-        displayLocationName: name,
-        displayLocationCountryCode: country_code,
+        displayLocation: `${name} ${convertToFlag(country_code)}`,
       });
 
       // 2) Getting actual weather
@@ -89,8 +82,6 @@ class App extends React.Component {
   }
 
   render() {
-    const { displayLocationName, displayLocationCountryCode } = this.state;
-
     return (
       <div className="app">
         <h1>Classic Weather</h1>
@@ -110,8 +101,7 @@ class App extends React.Component {
         {this.state.weather.weathercode && (
           <Weather
             weather={this.state.weather}
-            locationName={displayLocationName}
-            locationCountryCode={displayLocationCountryCode}
+            location={this.state.displayLocation}
           />
         )}
       </div>
@@ -123,6 +113,7 @@ export default App;
 
 class Weather extends React.Component {
   render() {
+    // console.log(this.props);
     const {
       temperature_2m_max: max,
       temperature_2m_min: min,
@@ -132,10 +123,7 @@ class Weather extends React.Component {
 
     return (
       <div>
-        <h2>
-          Weather {this.props.locationName}{" "}
-          <CountryFlag countryCode={this.props.locationCountryCode} />
-        </h2>
+        <h2>Weather {this.props.location}</h2>
         <ul className="weather">
           {dates.map((date, i) => (
             <Day
